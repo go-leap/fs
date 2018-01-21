@@ -1,0 +1,130 @@
+# ufs
+--
+    import "github.com/go-leap/fs"
+
+
+## Usage
+
+```go
+var (
+	// CreateModePerm is used by all functions in this package that create file-system directories or files.
+	CreateModePerm = os.ModePerm
+)
+```
+
+#### func  AllFilePathsIn
+
+```go
+func AllFilePathsIn(dirPath string, ignoreSubPath string) (allFilePaths []string)
+```
+AllFilePathsIn collects the full paths of all files directly or indirectly
+contained under `dirPath`.
+
+#### func  ClearDir
+
+```go
+func ClearDir(dirPath string, keepNames ...string) (err error)
+```
+ClearDir removes everything inside `dirPath`, but not `dirPath` itself and also
+excepting items inside `dirPath` (but not inside sub-directories) with one of
+the specified `keepNames`.
+
+#### func  CopyAllFilesAndSubDirs
+
+```go
+func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string, skipDirNames ...string) (err error)
+```
+CopyAllFilesAndSubDirs copies all files and directories inside `srcDirPath` into
+`dstDirPath`. All sub-directories whose `os.FileInfo.Name` is contained in
+`skipDirNames` (if supplied) are skipped, and so are files with names ending in
+`skipFileSuffix` (if supplied).
+
+#### func  CopyFile
+
+```go
+func CopyFile(srcFilePath, dstFilePath string) (err error)
+```
+CopyFile attempts an `io.Copy` from `srcFilePath` to `dstFilePath`.
+
+#### func  EnsureDir
+
+```go
+func EnsureDir(dirPath string) (err error)
+```
+EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
+
+#### func  IsAnyFileInDirNewerThanTheOldestOf
+
+```go
+func IsAnyFileInDirNewerThanTheOldestOf(dirPath string, filePaths ...string) (isAnyNewer bool)
+```
+IsAnyFileInDirNewerThanTheOldestOf returns whether any file directly or
+indirectly contained in `dirPath` is newer than the oldest of the specified
+`filePaths`.
+
+#### func  IsDir
+
+```go
+func IsDir(fsPath string) bool
+```
+IsDir returns whether a directory (not a file) exists at the specified `fsPath`.
+
+#### func  IsFile
+
+```go
+func IsFile(fsPath string) bool
+```
+IsFile returns whether a file (not a directory) exists at the specified
+`fsPath`.
+
+#### func  ReadTextFile
+
+```go
+func ReadTextFile(filePath string) (string, error)
+```
+ReadTextFile is a `string`-typed convenience short-hand for `ioutil.ReadFile`.
+
+#### func  ReadTextFileOr
+
+```go
+func ReadTextFileOr(filePath string, fallback string) string
+```
+ReadTextFileOr calls `ReadTextFile(filePath)` but returns `fallback` on `error`.
+
+#### func  ReadTextFileOrPanic
+
+```go
+func ReadTextFileOrPanic(filePath string) string
+```
+ReadTextFileOrPanic calls `ReadTextFile(filePath)` but `panic`s on `error`.
+
+#### func  SaveTo
+
+```go
+func SaveTo(src io.Reader, dstFilePath string) (err error)
+```
+SaveTo attempts an `io.Copy` from `src` to `dstFilePath`.
+
+#### func  Walk
+
+```go
+func Walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (err error)
+```
+
+#### func  WalkAllFiles
+
+```go
+func WalkAllFiles(dirPath string, onFile func(string) bool) error
+```
+
+#### func  WalkDirsIn
+
+```go
+func WalkDirsIn(dirPath string, onDir func(string) bool) error
+```
+
+#### func  WalkFilesIn
+
+```go
+func WalkFilesIn(dirPath string, onFile func(string) bool) error
+```
