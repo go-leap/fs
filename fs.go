@@ -10,8 +10,11 @@ import (
 )
 
 var (
-	// CreateModePerm is used by all functions in this package that create file-system directories or files.
+	// CreateModePerm is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
 	CreateModePerm = os.ModePerm
+
+	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
+	Del = os.RemoveAll
 )
 
 // AllFilePathsIn collects the full paths of all files directly or indirectly contained under `dirPath`.
@@ -30,8 +33,8 @@ func AllFilePathsIn(dirPath string, ignoreSubPath string) (allFilePaths []string
 
 // ClearDir removes everything inside `dirPath`, but not `dirPath` itself and also excepting items inside `dirPath` (but not inside sub-directories) with one of the specified `keepNames`.
 func ClearDir(dirPath string, keepNames ...string) (err error) {
-	var fileInfos []os.FileInfo
 	if IsDir(dirPath) {
+		var fileInfos []os.FileInfo
 		if fileInfos, err = ioutil.ReadDir(dirPath); err == nil {
 			for _, fi := range fileInfos {
 				if fn := fi.Name(); !ustr.In(fn, keepNames...) {
@@ -172,25 +175,6 @@ func SaveTo(src io.Reader, dstFilePath string) (err error) {
 	return
 }
 
-func Walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (err error) {
-	if IsDir(dirPath) {
-		_, err = walk(dirPath, self, traverse, onDir, onFile)
-	}
-	return
-}
-
-func WalkAllFiles(dirPath string, onFile func(string) bool) error {
-	return Walk(dirPath, false, true, nil, onFile)
-}
-
-func WalkDirsIn(dirPath string, onDir func(string) bool) error {
-	return Walk(dirPath, false, false, onDir, nil)
-}
-
-func WalkFilesIn(dirPath string, onFile func(string) bool) error {
-	return Walk(dirPath, false, false, nil, onFile)
-}
-
 func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (keepWalking bool, err error) {
 	dodirs, dofiles := onDir != nil, onFile != nil
 	if keepWalking = true; self && dodirs {
@@ -217,4 +201,34 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onF
 		}
 	}
 	return
+}
+
+func Walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (err error) {
+	if IsDir(dirPath) {
+		_, err = walk(dirPath, self, traverse, onDir, onFile)
+	}
+	return
+}
+
+func WalkAllFiles(dirPath string, onFile func(string) bool) error {
+	return Walk(dirPath, false, true, nil, onFile)
+}
+
+func WalkDirsIn(dirPath string, onDir func(string) bool) error {
+	return Walk(dirPath, false, false, onDir, nil)
+}
+
+func WalkFilesIn(dirPath string, onFile func(string) bool) error {
+	return Walk(dirPath, false, false, nil, onFile)
+}
+
+// WriteBinaryFile is a convenience short-hand for `ioutil.WriteFile` that also `EnsureDir`s the destination.
+func WriteBinaryFile(filePath string, contents []byte) error {
+	_ = EnsureDir(filepath.Dir(filePath))
+	return ioutil.WriteFile(filePath, contents, CreateModePerm)
+}
+
+// WriteTextFile is a `string`-typed convenience short-hand for `ioutil.WriteFile` that also `EnsureDir`s the destination.
+func WriteTextFile(filePath, contents string) error {
+	return WriteBinaryFile(filePath, []byte(contents))
 }

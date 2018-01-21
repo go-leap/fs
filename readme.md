@@ -7,8 +7,11 @@
 
 ```go
 var (
-	// CreateModePerm is used by all functions in this package that create file-system directories or files.
+	// CreateModePerm is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
 	CreateModePerm = os.ModePerm
+
+	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
+	Del = os.RemoveAll
 )
 ```
 
@@ -128,3 +131,19 @@ func WalkDirsIn(dirPath string, onDir func(string) bool) error
 ```go
 func WalkFilesIn(dirPath string, onFile func(string) bool) error
 ```
+
+#### func  WriteBinaryFile
+
+```go
+func WriteBinaryFile(filePath string, contents []byte) error
+```
+WriteBinaryFile is a convenience short-hand for `ioutil.WriteFile` that also
+`EnsureDir`s the destination.
+
+#### func  WriteTextFile
+
+```go
+func WriteTextFile(filePath, contents string) error
+```
+WriteTextFile is a `string`-typed convenience short-hand for `ioutil.WriteFile`
+that also `EnsureDir`s the destination.
