@@ -139,6 +139,17 @@ func IsFile(fsPath string) bool {
 	return err == nil && stat.Mode().IsRegular()
 }
 
+// IsNewerThanTime returns whether the specified `filePath` was last modified later than the specified `unixNanoTime`.
+func IsNewerThanTime(filePath string, unixNanoTime int64) (newer bool, err error) {
+	if newer = true; unixNanoTime > 0 {
+		var fileinfo os.FileInfo
+		if fileinfo, err = os.Stat(filePath); err == nil && fileinfo != nil {
+			newer = fileinfo.ModTime().UnixNano() > unixNanoTime
+		}
+	}
+	return
+}
+
 // ReadTextFile is a `string`-typed convenience short-hand for `ioutil.ReadFile`.
 func ReadTextFile(filePath string) (string, error) {
 	data, err := ioutil.ReadFile(filePath)

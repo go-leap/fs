@@ -80,6 +80,14 @@ func IsFile(fsPath string) bool
 IsFile returns whether a file (not a directory) exists at the specified
 `fsPath`.
 
+#### func  IsNewerThanTime
+
+```go
+func IsNewerThanTime(filePath string, unixNanoTime int64) (newer bool, err error)
+```
+IsNewerThanTime returns whether the specified `filePath` was last modified later
+than the specified `unixNanoTime`.
+
 #### func  ReadTextFile
 
 ```go
