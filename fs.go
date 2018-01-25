@@ -18,12 +18,13 @@ var (
 )
 
 // AllFilePathsIn collects the full paths of all files directly or indirectly contained under `dirPath`.
-func AllFilePathsIn(dirPath string, ignoreSubPath string) (allFilePaths []string) {
+func AllFilePathsIn(dirPath string, ignoreSubPath string, fileName ustr.Pat) (allFilePaths []string) {
 	if ignoreSubPath != "" && !ustr.Pref(ignoreSubPath, dirPath) {
 		ignoreSubPath = filepath.Join(dirPath, ignoreSubPath)
 	}
+	ok1, ok2 := ignoreSubPath == "", fileName == ""
 	WalkAllFiles(dirPath, func(curfilepath string) (keepwalking bool) {
-		if !ustr.Pref(curfilepath, ignoreSubPath) {
+		if (ok1 || !ustr.Pref(curfilepath, ignoreSubPath)) && (ok2 || fileName.Match(filepath.Base(curfilepath))) {
 			allFilePaths = append(allFilePaths, curfilepath)
 		}
 		return true
@@ -91,6 +92,16 @@ func EnsureDir(dirPath string) (err error) {
 		if err = EnsureDir(filepath.Dir(dirPath)); err == nil {
 			err = os.Mkdir(dirPath, CreateModePerm)
 		}
+	}
+	return
+}
+
+// Locate finds the `filePath` with the given `fileName` that is nearest to `curPath`.
+func Locate(curPath string, fileName string) (filePath string) {
+	if fspath := filepath.Join(curPath, fileName); IsFile(fspath) {
+		filePath = fspath
+	} else if fspath = filepath.Dir(curPath); fspath != curPath {
+		filePath = Locate(fspath, fileName)
 	}
 	return
 }
