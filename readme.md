@@ -18,7 +18,7 @@ var (
 #### func  AllFilePathsIn
 
 ```go
-func AllFilePathsIn(dirPath string, ignoreSubPath string) (allFilePaths []string)
+func AllFilePathsIn(dirPath string, ignoreSubPath string, fileName ustr.Pat) (allFilePaths []string)
 ```
 AllFilePathsIn collects the full paths of all files directly or indirectly
 contained under `dirPath`.
@@ -87,6 +87,14 @@ func IsNewerThanTime(filePath string, unixNanoTime int64) (newer bool, err error
 ```
 IsNewerThanTime returns whether the specified `filePath` was last modified later
 than the specified `unixNanoTime`.
+
+#### func  Locate
+
+```go
+func Locate(curPath string, fileName string) (filePath string)
+```
+Locate finds the `filePath` with the given `fileName` that is nearest to
+`curPath`.
 
 #### func  ReadTextFile
 
