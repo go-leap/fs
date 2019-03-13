@@ -10,11 +10,13 @@ import (
 )
 
 var (
-	// CreateModePerm is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
+	// CreateModePerm (rwx for user,group,other) is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
 	CreateModePerm = os.ModePerm
 
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
+
+	WalkIgnoreReadDirErrs bool
 )
 
 // AllFilePathsIn collects the full paths of all files directly or indirectly contained under `dirPath`.
@@ -88,11 +90,12 @@ func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string
 
 // EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
 func EnsureDir(dirPath string) (err error) {
-	if !IsDir(dirPath) {
-		if err = EnsureDir(filepath.Dir(dirPath)); err == nil {
-			err = os.Mkdir(dirPath, CreateModePerm)
-		}
-	}
+	err = os.MkdirAll(dirPath, CreateModePerm)
+	// if !IsDir(dirPath) {
+	// if err = EnsureDir(filepath.Dir(dirPath)); err == nil {
+	// 	err = os.Mkdir(dirPath, CreateModePerm)
+	// }
+	// }
 	return
 }
 
@@ -204,11 +207,13 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onF
 	}
 	if keepWalking {
 		var fileInfos []os.FileInfo
-		if fileInfos, err = ioutil.ReadDir(dirPath); err == nil {
+		if fileInfos, err = ioutil.ReadDir(dirPath); err == nil || WalkIgnoreReadDirErrs {
+			err = nil
 			for _, fi := range fileInfos {
-				if fspath := filepath.Join(dirPath, fi.Name()); fi.Mode().IsRegular() && dofiles {
+				fname, fmode := fi.Name(), fi.Mode()
+				if fspath := filepath.Join(dirPath, fname); fmode.IsRegular() && dofiles {
 					keepWalking = onFile(fspath)
-				} else if fi.Mode().IsDir() {
+				} else if fmode.IsDir() {
 					if dodirs {
 						keepWalking = onDir(fspath)
 					}

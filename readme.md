@@ -7,11 +7,13 @@
 
 ```go
 var (
-	// CreateModePerm is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
+	// CreateModePerm (rwx for user,group,other) is used by all functions in this package that create file-system directories or files, namely: `EnsureDir`, `WriteBinaryFile`, `WriteTextFile`.
 	CreateModePerm = os.ModePerm
 
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
+
+	WalkIgnoreReadDirErrs bool
 )
 ```
 
