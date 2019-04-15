@@ -17,6 +17,7 @@ var (
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
 
+	WalkReadDirFunc       = ioutil.ReadDir
 	WalkIgnoreReadDirErrs bool
 )
 
@@ -39,7 +40,7 @@ func AllFilePathsIn(dirPath string, ignoreSubPath string, fileName ustr.Pat) (al
 func ClearDir(dirPath string, keepNames ...string) (err error) {
 	if IsDir(dirPath) {
 		var fileInfos []os.FileInfo
-		if fileInfos, err = ioutil.ReadDir(dirPath); err == nil {
+		if fileInfos, err = Dir(dirPath); err == nil {
 			for _, fi := range fileInfos {
 				if fn := fi.Name(); !ustr.In(fn, keepNames...) {
 					if err = os.RemoveAll(filepath.Join(dirPath, fn)); err != nil {
@@ -69,7 +70,7 @@ func CopyFile(srcFilePath, dstFilePath string) (err error) {
 // are skipped, and so are files with names ending in `skipFileSuffix` (if supplied).
 func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string, skipDirNames ...string) (err error) {
 	var fileInfos []os.FileInfo
-	if fileInfos, err = ioutil.ReadDir(srcDirPath); err == nil {
+	if fileInfos, err = Dir(srcDirPath); err == nil {
 		if err = EnsureDir(dstDirPath); err == nil {
 			for _, fi := range fileInfos {
 				fname := fi.Name()
@@ -85,6 +86,16 @@ func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string
 				}
 			}
 		}
+	}
+	return
+}
+
+// Dir is like ioutil.ReadDir without the sorting
+func Dir(dirPath string) (content []os.FileInfo, err error) {
+	var f *os.File
+	if f, err = os.Open(dirPath); err == nil {
+		content, err = f.Readdir(-1)
+		_ = f.Close()
 	}
 	return
 }
@@ -209,7 +220,7 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileIn
 	}
 	if keepWalking {
 		var fileInfos []os.FileInfo
-		if fileInfos, err = ioutil.ReadDir(dirPath); err == nil || WalkIgnoreReadDirErrs {
+		if fileInfos, err = WalkReadDirFunc(dirPath); err == nil || WalkIgnoreReadDirErrs {
 			err = nil
 			for _, fi := range fileInfos {
 				fname, fmode := fi.Name(), fi.Mode()

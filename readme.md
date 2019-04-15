@@ -13,6 +13,7 @@ var (
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
 
+	WalkReadDirFunc       = ioutil.ReadDir
 	WalkIgnoreReadDirErrs bool
 )
 ```
@@ -50,6 +51,13 @@ CopyAllFilesAndSubDirs copies all files and directories inside `srcDirPath` into
 func CopyFile(srcFilePath, dstFilePath string) (err error)
 ```
 CopyFile attempts an `io.Copy` from `srcFilePath` to `dstFilePath`.
+
+#### func  Dir
+
+```go
+func Dir(dirPath string) (content []os.FileInfo, err error)
+```
+Dir is like ioutil.ReadDir without the sorting
 
 #### func  EnsureDir
 
