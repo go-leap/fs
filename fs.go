@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-leap/str"
 )
@@ -25,7 +26,7 @@ func AllFilePathsIn(dirPath string, ignoreSubPath string, fileName ustr.Pat) (al
 		ignoreSubPath = filepath.Join(dirPath, ignoreSubPath)
 	}
 	ok1, ok2 := ignoreSubPath == "", fileName == ""
-	WalkAllFiles(dirPath, func(curfilepath string) (keepwalking bool) {
+	WalkAllFiles(dirPath, func(curfilepath string, _ os.FileInfo) (keepwalking bool) {
 		if (ok1 || !ustr.Pref(curfilepath, ignoreSubPath)) && (ok2 || fileName.Match(filepath.Base(curfilepath))) {
 			allFilePaths = append(allFilePaths, curfilepath)
 		}
@@ -122,9 +123,9 @@ func IsAnyFileInDirNewerThanTheOldestOf(dirPath string, filePaths ...string) (is
 			cmpfiletimeoldest = modtime
 		}
 	}
-	if err := WalkAllFiles(dirPath, func(curfilepath string) (keepwalking bool) {
+	if err := WalkAllFiles(dirPath, func(curfilepath string, curfile os.FileInfo) (keepwalking bool) {
 		if !ustr.In(curfilepath, filePaths...) {
-			if curfile, errstat := os.Stat(curfilepath); errstat != nil || curfile == nil || curfile.ModTime().UnixNano() > cmpfiletimeoldest {
+			if curfile == nil || curfile.ModTime().UnixNano() > cmpfiletimeoldest {
 				isAnyNewer = true
 			}
 		}
@@ -200,10 +201,11 @@ func SaveTo(src io.Reader, dstFilePath string) (err error) {
 	return
 }
 
-func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (keepWalking bool, err error) {
+func walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (keepWalking bool, err error) {
 	dodirs, dofiles := onDir != nil, onFile != nil
 	if keepWalking = true; self && dodirs {
-		keepWalking = onDir(dirPath)
+		fi, _ := os.Stat(dirPath)
+		keepWalking = onDir(dirPath, fi)
 	}
 	if keepWalking {
 		var fileInfos []os.FileInfo
@@ -212,10 +214,10 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onF
 			for _, fi := range fileInfos {
 				fname, fmode := fi.Name(), fi.Mode()
 				if fspath := filepath.Join(dirPath, fname); fmode.IsRegular() && dofiles {
-					keepWalking = onFile(fspath)
+					keepWalking = onFile(fspath, fi)
 				} else if fmode.IsDir() {
 					if dodirs {
-						keepWalking = onDir(fspath)
+						keepWalking = onDir(fspath, fi)
 					}
 					if keepWalking && traverse {
 						keepWalking, err = walk(fspath, false, true, onDir, onFile)
@@ -230,22 +232,22 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onF
 	return
 }
 
-func Walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (err error) {
+func Walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error) {
 	if IsDir(dirPath) {
 		_, err = walk(dirPath, self, traverse, onDir, onFile)
 	}
 	return
 }
 
-func WalkAllFiles(dirPath string, onFile func(string) bool) error {
+func WalkAllFiles(dirPath string, onFile func(string, os.FileInfo) bool) error {
 	return Walk(dirPath, false, true, nil, onFile)
 }
 
-func WalkDirsIn(dirPath string, onDir func(string) bool) error {
+func WalkDirsIn(dirPath string, onDir func(string, os.FileInfo) bool) error {
 	return Walk(dirPath, false, false, onDir, nil)
 }
 
-func WalkFilesIn(dirPath string, onFile func(string) bool) error {
+func WalkFilesIn(dirPath string, onFile func(string, os.FileInfo) bool) error {
 	return Walk(dirPath, false, false, nil, onFile)
 }
 
@@ -258,4 +260,34 @@ func WriteBinaryFile(filePath string, contents []byte) error {
 // WriteTextFile is a `string`-typed convenience short-hand for `ioutil.WriteFile` that also `EnsureDir`s the destination.
 func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
+}
+
+func WatchModTimesEvery(interval time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (stop func()) {
+	ticker := time.NewTicker(interval)
+	stop = ticker.Stop
+	go func() {
+		var raisings map[string]os.FileInfo
+		timeslastraised := make(map[string]int64, 128)
+		ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
+			if restrictFilesToSuffix == "" || fileinfo.IsDir() || ustr.Suff(fullpath, restrictFilesToSuffix) {
+				modtime := fileinfo.ModTime().UnixNano()
+				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || modtime == 0 || tlr <= modtime {
+					timeslastraised[fullpath] = time.Now().UnixNano()
+					raisings[fullpath] = fileinfo
+				}
+			}
+			return true
+		}
+
+		for range ticker.C {
+			raisings = map[string]os.FileInfo{}
+			for i := range dirPaths {
+				_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
+			}
+			if len(raisings) > 0 {
+				onModTime(raisings)
+			}
+		}
+	}()
+	return
 }

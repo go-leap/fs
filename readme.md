@@ -129,25 +129,31 @@ SaveTo attempts an `io.Copy` from `src` to `dstFilePath`.
 #### func  Walk
 
 ```go
-func Walk(dirPath string, self bool, traverse bool, onDir func(string) bool, onFile func(string) bool) (err error)
+func Walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error)
 ```
 
 #### func  WalkAllFiles
 
 ```go
-func WalkAllFiles(dirPath string, onFile func(string) bool) error
+func WalkAllFiles(dirPath string, onFile func(string, os.FileInfo) bool) error
 ```
 
 #### func  WalkDirsIn
 
 ```go
-func WalkDirsIn(dirPath string, onDir func(string) bool) error
+func WalkDirsIn(dirPath string, onDir func(string, os.FileInfo) bool) error
 ```
 
 #### func  WalkFilesIn
 
 ```go
-func WalkFilesIn(dirPath string, onFile func(string) bool) error
+func WalkFilesIn(dirPath string, onFile func(string, os.FileInfo) bool) error
+```
+
+#### func  WatchModTimesEvery
+
+```go
+func WatchModTimesEvery(interval time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (stop func())
 ```
 
 #### func  WriteBinaryFile
