@@ -273,63 +273,62 @@ func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
 }
 
-func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (stop func()) {
+func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (onTick func(), stop func()) {
 	var ticker *time.Ticker
-	if interval != 0 {
+	if interval > 0 {
 		ticker = time.NewTicker(interval)
 		stop = ticker.Stop
 	}
 
-	go func() {
-		type gather struct {
-			os.FileInfo
-			modTime int64
-		}
-
-		var gathers map[string]gather
-		var modnewest int64
-		ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
-			if restrictFilesToSuffix == "" || fileinfo.IsDir() || ustr.Suff(fullpath, restrictFilesToSuffix) {
-				modtime := fileinfo.ModTime().UnixNano()
-				gathers[fullpath] = gather{fileinfo, modtime}
-				if modtime > modnewest {
-					modnewest = modtime
-				}
+	type gather struct {
+		os.FileInfo
+		modTime int64
+	}
+	var gathers map[string]gather
+	var modnewest int64
+	ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
+		if restrictFilesToSuffix == "" || fileinfo.IsDir() || ustr.Suff(fullpath, restrictFilesToSuffix) {
+			modtime := fileinfo.ModTime().UnixNano()
+			gathers[fullpath] = gather{fileinfo, modtime}
+			if modtime > modnewest {
+				modnewest = modtime
 			}
-			return true
 		}
+		return true
+	}
 
-		var raisings map[string]os.FileInfo
-		gatherscap, holdoff, timeslastraised :=
-			64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
-		ontick := func() {
-			modnewest, gathers = 0, make(map[string]gather, gatherscap)
-			for i := range dirPaths {
-				_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
-			}
-			gatherscap = len(gathers)
-			if (time.Now().UnixNano() - modnewest) > holdoff {
-				for fullpath, gather := range gathers {
-					if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
-						if timeslastraised[fullpath] = time.Now().UnixNano(); raisings == nil {
-							raisings = make(map[string]os.FileInfo, 4)
-						}
-						raisings[fullpath] = gather.FileInfo
+	var raisings map[string]os.FileInfo
+	gatherscap, holdoff, timeslastraised :=
+		64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
+	onTick = func() {
+		modnewest, gathers = 0, make(map[string]gather, gatherscap)
+		for i := range dirPaths {
+			_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
+		}
+		gatherscap = len(gathers)
+		if (time.Now().UnixNano() - modnewest) > holdoff {
+			for fullpath, gather := range gathers {
+				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
+					if timeslastraised[fullpath] = time.Now().UnixNano(); raisings == nil {
+						raisings = make(map[string]os.FileInfo, 4)
 					}
+					raisings[fullpath] = gather.FileInfo
 				}
 			}
-			gathers = nil
-			if len(raisings) > 0 {
-				onModTime(raisings)
-				raisings = nil
-			}
 		}
+		if gathers = nil; len(raisings) > 0 {
+			onModTime(raisings)
+			raisings = nil
+		}
+	}
 
-		if ontick(); ticker != nil {
+	if onTick(); ticker != nil {
+		go func() {
 			for range ticker.C {
-				ontick()
+				onTick()
 			}
-		}
-	}()
+		}()
+	}
+
 	return
 }

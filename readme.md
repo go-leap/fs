@@ -161,7 +161,7 @@ func WalkFilesIn(dirPath string, onFile func(string, os.FileInfo) bool) error
 #### func  WatchModTimesEvery
 
 ```go
-func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (stop func())
+func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (onTick func(), stop func())
 ```
 
 #### func  WriteBinaryFile
