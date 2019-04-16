@@ -100,19 +100,6 @@ func Dir(dirPath string) (contents []os.FileInfo, err error) {
 	return
 }
 
-func Files(dirPath string, suffix string) (contents []os.FileInfo, err error) {
-	if contents, err = Dir(dirPath); err != nil {
-		contents = nil
-	} else {
-		for i := 0; i < len(contents); i++ {
-			if contents[i].IsDir() || (suffix != "" && !ustr.Suff(contents[i].Name(), suffix)) {
-				contents[i] = nil
-			}
-		}
-	}
-	return
-}
-
 // EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
 func EnsureDir(dirPath string) (err error) {
 	err = os.MkdirAll(dirPath, CreateModePerm)

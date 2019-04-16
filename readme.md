@@ -66,12 +66,6 @@ func EnsureDir(dirPath string) (err error)
 ```
 EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
 
-#### func  Files
-
-```go
-func Files(dirPath string, suffix string) (contents []os.FileInfo, err error)
-```
-
 #### func  IsAnyFileInDirNewerThanTheOldestOf
 
 ```go
