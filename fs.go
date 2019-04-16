@@ -91,11 +91,24 @@ func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string
 }
 
 // Dir is like ioutil.ReadDir without the sorting
-func Dir(dirPath string) (content []os.FileInfo, err error) {
+func Dir(dirPath string) (contents []os.FileInfo, err error) {
 	var f *os.File
 	if f, err = os.Open(dirPath); err == nil {
-		content, err = f.Readdir(-1)
+		contents, err = f.Readdir(-1)
 		_ = f.Close()
+	}
+	return
+}
+
+func Files(dirPath string, suffix string) (contents []os.FileInfo, err error) {
+	if contents, err = Dir(dirPath); err != nil {
+		contents = nil
+	} else {
+		for i := 0; i < len(contents); i++ {
+			if contents[i].IsDir() || (suffix != "" && !ustr.Suff(contents[i].Name(), suffix)) {
+				contents[i] = nil
+			}
+		}
 	}
 	return
 }
@@ -274,10 +287,15 @@ func WriteTextFile(filePath, contents string) error {
 }
 
 func WatchModTimesEvery(interval time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (stop func()) {
-	ticker := time.NewTicker(interval)
-	stop = ticker.Stop
+	var ticker *time.Ticker
+	if interval != 0 {
+		ticker = time.NewTicker(interval)
+		stop = ticker.Stop
+	}
+
 	go func() {
 		var raisings map[string]os.FileInfo
+
 		timeslastraised := make(map[string]int64, 128)
 		ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
 			if restrictFilesToSuffix == "" || fileinfo.IsDir() || ustr.Suff(fullpath, restrictFilesToSuffix) {
@@ -290,13 +308,19 @@ func WatchModTimesEvery(interval time.Duration, dirPaths []string, restrictFiles
 			return true
 		}
 
-		for range ticker.C {
+		ontick := func() {
 			raisings = map[string]os.FileInfo{}
 			for i := range dirPaths {
 				_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
 			}
 			if len(raisings) > 0 {
 				onModTime(raisings)
+			}
+		}
+
+		if ontick(); ticker != nil {
+			for range ticker.C {
+				ontick()
 			}
 		}
 	}()

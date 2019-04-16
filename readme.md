@@ -55,7 +55,7 @@ CopyFile attempts an `io.Copy` from `srcFilePath` to `dstFilePath`.
 #### func  Dir
 
 ```go
-func Dir(dirPath string) (content []os.FileInfo, err error)
+func Dir(dirPath string) (contents []os.FileInfo, err error)
 ```
 Dir is like ioutil.ReadDir without the sorting
 
@@ -65,6 +65,12 @@ Dir is like ioutil.ReadDir without the sorting
 func EnsureDir(dirPath string) (err error)
 ```
 EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
+
+#### func  Files
+
+```go
+func Files(dirPath string, suffix string) (contents []os.FileInfo, err error)
+```
 
 #### func  IsAnyFileInDirNewerThanTheOldestOf
 
