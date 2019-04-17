@@ -273,13 +273,7 @@ func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
 }
 
-func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (onTick func(), stop func()) {
-	var ticker *time.Ticker
-	if interval > 0 {
-		ticker = time.NewTicker(interval)
-		stop = ticker.Stop
-	}
-
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() {
 	type gather struct {
 		os.FileInfo
 		modTime int64
@@ -300,35 +294,24 @@ func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo t
 	var raisings map[string]os.FileInfo
 	gatherscap, holdoff, timeslastraised :=
 		64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
-	onTick = func() {
+	return func() {
+		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
 		for i := range dirPaths {
 			_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
 		}
 		gatherscap = len(gathers)
-		if (time.Now().UnixNano() - modnewest) > holdoff {
+		if now := time.Now().UnixNano(); holdoff <= 0 || (now-modnewest) > holdoff {
 			for fullpath, gather := range gathers {
 				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
-					if timeslastraised[fullpath] = time.Now().UnixNano(); raisings == nil {
+					if timeslastraised[fullpath] = now; raisings == nil {
 						raisings = make(map[string]os.FileInfo, 4)
 					}
 					raisings[fullpath] = gather.FileInfo
 				}
 			}
 		}
-		if gathers = nil; len(raisings) > 0 {
-			onModTime(raisings)
-			raisings = nil
-		}
+		onModTime(raisings, tstart)
+		raisings = nil
 	}
-
-	if onTick(); ticker != nil {
-		go func() {
-			for range ticker.C {
-				onTick()
-			}
-		}()
-	}
-
-	return
 }

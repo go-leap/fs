@@ -106,6 +106,12 @@ func Locate(curPath string, fileName string) (filePath string)
 Locate finds the `filePath` with the given `fileName` that is nearest to
 `curPath`.
 
+#### func  ModificationsWatcher
+
+```go
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func()
+```
+
 #### func  ReadTextFile
 
 ```go
@@ -156,12 +162,6 @@ func WalkDirsIn(dirPath string, onDir func(string, os.FileInfo) bool) error
 
 ```go
 func WalkFilesIn(dirPath string, onFile func(string, os.FileInfo) bool) error
-```
-
-#### func  WatchModTimesEvery
-
-```go
-func WatchModTimesEvery(interval time.Duration, delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo)) (onTick func(), stop func())
 ```
 
 #### func  WriteBinaryFile
