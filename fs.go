@@ -292,8 +292,8 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	}
 
 	var raisings map[string]os.FileInfo
-	gatherscap, holdoff, timeslastraised :=
-		64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
+	firstrun, gatherscap, holdoff, timeslastraised :=
+		true, 64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
 	return func() {
 		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
@@ -301,7 +301,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 			_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
 		}
 		gatherscap = len(gathers)
-		if now := time.Now().UnixNano(); holdoff <= 0 || (now-modnewest) > holdoff {
+		if now := time.Now().UnixNano(); firstrun || holdoff <= 0 || (now-modnewest) > holdoff {
 			for fullpath, gather := range gathers {
 				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
 					if timeslastraised[fullpath] = now; raisings == nil {
@@ -312,6 +312,6 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 			}
 		}
 		onModTime(raisings, tstart)
-		raisings = nil
+		raisings, firstrun = nil, false
 	}
 }
