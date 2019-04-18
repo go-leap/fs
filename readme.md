@@ -109,7 +109,7 @@ Locate finds the `filePath` with the given `fileName` that is nearest to
 #### func  ModificationsWatcher
 
 ```go
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func()
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func()
 ```
 
 #### func  ReadTextFile
@@ -143,7 +143,7 @@ SaveTo attempts an `io.Copy` from `src` to `dstFilePath`.
 #### func  Walk
 
 ```go
-func Walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error)
+func Walk(dirPath string, callOnDirOnSelf bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error)
 ```
 
 #### func  WalkAllFiles

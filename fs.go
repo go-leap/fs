@@ -243,9 +243,9 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileIn
 	return
 }
 
-func Walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error) {
+func Walk(dirPath string, callOnDirOnSelf bool, traverse bool, onDir func(string, os.FileInfo) bool, onFile func(string, os.FileInfo) bool) (err error) {
 	if IsDir(dirPath) {
-		_, err = walk(dirPath, self, traverse, onDir, onFile)
+		_, err = walk(dirPath, callOnDirOnSelf, traverse, onDir, onFile)
 	}
 	return
 }
@@ -273,7 +273,7 @@ func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
 }
 
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() {
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() {
 	type gather struct {
 		os.FileInfo
 		modTime int64
@@ -297,8 +297,11 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	return func() {
 		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
-		for i := range dirPaths {
-			_ = Walk(dirPaths[i], true, true, ondirorfile, ondirorfile)
+		for i := range dirPathsRecursive {
+			_ = Walk(dirPathsRecursive[i], true, true, ondirorfile, ondirorfile)
+		}
+		for i := range dirPathsOther {
+			_ = Walk(dirPathsOther[i], false, false, nil, ondirorfile)
 		}
 		gatherscap = len(gathers)
 		if now := time.Now().UnixNano(); firstrun || holdoff <= 0 || (now-modnewest) > holdoff {
