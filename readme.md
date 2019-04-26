@@ -109,7 +109,7 @@ Locate finds the `filePath` with the given `fileName` that is nearest to
 #### func  ModificationsWatcher
 
 ```go
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func()
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() int
 ```
 
 #### func  ReadTextFile

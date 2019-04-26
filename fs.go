@@ -273,7 +273,7 @@ func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
 }
 
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() {
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() int {
 	type gather struct {
 		os.FileInfo
 		modTime int64
@@ -294,7 +294,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	var raisings map[string]os.FileInfo
 	firstrun, gatherscap, holdoff, timeslastraised :=
 		true, 64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
-	return func() {
+	return func() (numraised int) {
 		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
 		for i := range dirPathsRecursive {
@@ -315,6 +315,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 			}
 		}
 		onModTime(raisings, tstart)
-		raisings, firstrun = nil, false
+		numraised, raisings, firstrun = len(raisings), nil, false
+		return
 	}
 }
