@@ -273,6 +273,7 @@ func WriteTextFile(filePath, contents string) error {
 	return WriteBinaryFile(filePath, []byte(contents))
 }
 
+// ModificationsWatcher returns a func that mustn't be called concurrently without manual protection.
 func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() int {
 	type gather struct {
 		os.FileInfo
@@ -281,7 +282,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	var gathers map[string]gather
 	var modnewest int64
 	ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
-		if restrictFilesToSuffix == "" || fileinfo.IsDir() || ustr.Suff(fullpath, restrictFilesToSuffix) {
+		if fileinfo.IsDir() || len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix) {
 			modtime := fileinfo.ModTime().UnixNano()
 			gathers[fullpath] = gather{fileinfo, modtime}
 			if modtime > modnewest {
