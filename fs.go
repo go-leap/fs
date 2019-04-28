@@ -282,7 +282,7 @@ func WriteTextFile(filePath, contents string) error {
 }
 
 // ModificationsWatcher returns a func that mustn't be called concurrently without manual protection.
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirNameOk func(string) bool, onModTime func(map[string]os.FileInfo, int64)) func() int {
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirOk func(string, string) bool, onModTime func(map[string]os.FileInfo, int64)) func() int {
 	type gather struct {
 		os.FileInfo
 		modTime int64
@@ -291,7 +291,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	var modnewest int64
 	var ondirorfile func(string, os.FileInfo) bool
 	ondirorfile = func(fullpath string, fileinfo os.FileInfo) bool {
-		if isdir := fileinfo.IsDir(); (isdir && (dirNameOk == nil || dirNameOk(fileinfo.Name()))) ||
+		if isdir := fileinfo.IsDir(); (isdir && (dirOk == nil || dirOk(fullpath, fileinfo.Name()))) ||
 			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
 			modtime := fileinfo.ModTime().UnixNano()
 			gathers[fullpath] = gather{fileinfo, modtime}
