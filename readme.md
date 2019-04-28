@@ -66,6 +66,12 @@ func EnsureDir(dirPath string) (err error)
 ```
 EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
 
+#### func  HasFilesWithSuffix
+
+```go
+func HasFilesWithSuffix(dirPath string, suff string) (has bool)
+```
+
 #### func  IsAnyFileInDirNewerThanTheOldestOf
 
 ```go
@@ -109,7 +115,7 @@ Locate finds the `filePath` with the given `fileName` that is nearest to
 #### func  ModificationsWatcher
 
 ```go
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() int
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirNameOk func(string) bool, onModTime func(map[string]os.FileInfo, int64)) func() int
 ```
 ModificationsWatcher returns a func that mustn't be called concurrently without
 manual protection.

@@ -147,6 +147,14 @@ func IsAnyFileInDirNewerThanTheOldestOf(dirPath string, filePaths ...string) (is
 	return
 }
 
+func HasFilesWithSuffix(dirPath string, suff string) (has bool) {
+	_ = WalkFilesIn(dirPath, func(fullpath string, fileinfo os.FileInfo) bool {
+		has = has || ustr.Suff(fullpath, suff)
+		return !has
+	})
+	return
+}
+
 // IsDir returns whether a directory (not a file) exists at the specified `fsPath`.
 func IsDir(fsPath string) bool {
 	if len(fsPath) == 0 {
@@ -274,19 +282,28 @@ func WriteTextFile(filePath, contents string) error {
 }
 
 // ModificationsWatcher returns a func that mustn't be called concurrently without manual protection.
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, onModTime func(map[string]os.FileInfo, int64)) func() int {
+func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirNameOk func(string) bool, onModTime func(map[string]os.FileInfo, int64)) func() int {
 	type gather struct {
 		os.FileInfo
 		modTime int64
 	}
 	var gathers map[string]gather
 	var modnewest int64
-	ondirorfile := func(fullpath string, fileinfo os.FileInfo) bool {
-		if fileinfo.IsDir() || len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix) {
+	var ondirorfile func(string, os.FileInfo) bool
+	ondirorfile = func(fullpath string, fileinfo os.FileInfo) bool {
+		if isdir := fileinfo.IsDir(); (isdir && (dirNameOk == nil || dirNameOk(fileinfo.Name()))) ||
+			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
 			modtime := fileinfo.ModTime().UnixNano()
 			gathers[fullpath] = gather{fileinfo, modtime}
 			if modtime > modnewest {
 				modnewest = modtime
+			}
+			if isdir {
+				if dircontents, err := WalkReadDirFunc(fullpath); err == nil {
+					for _, fi := range dircontents {
+						ondirorfile(filepath.Join(fullpath, fi.Name()), fi)
+					}
+				}
 			}
 		}
 		return true
@@ -299,7 +316,7 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
 		for i := range dirPathsRecursive {
-			_ = Walk(dirPathsRecursive[i], true, true, ondirorfile, ondirorfile)
+			_ = Walk(dirPathsRecursive[i], true, false, ondirorfile, nil)
 		}
 		for i := range dirPathsOther {
 			_ = Walk(dirPathsOther[i], false, false, nil, ondirorfile)
