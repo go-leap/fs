@@ -289,15 +289,23 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 	}
 	var gathers map[string]gather
 	var modnewest int64
-	var ondirorfile func(string, os.FileInfo) bool
-	ondirorfile = func(fullpath string, fileinfo os.FileInfo) bool {
-		if isdir := fileinfo.IsDir(); (isdir && (dirOk == nil || dirOk(fullpath, fileinfo.Name()))) ||
-			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
+	checkmodtime := func(fullpath string, fileinfo os.FileInfo) {
+		if fileinfo == nil {
+			fileinfo, _ = os.Stat(fullpath)
+		}
+		if fileinfo != nil {
 			modtime := fileinfo.ModTime().UnixNano()
 			gathers[fullpath] = gather{fileinfo, modtime}
 			if modtime > modnewest {
 				modnewest = modtime
 			}
+		}
+	}
+	var ondirorfile func(string, os.FileInfo) bool
+	ondirorfile = func(fullpath string, fileinfo os.FileInfo) bool {
+		if isdir := fileinfo.IsDir(); (isdir && (dirOk == nil || dirOk(fullpath, fileinfo.Name()))) ||
+			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
+			checkmodtime(fullpath, fileinfo)
 			if isdir {
 				if dircontents, err := WalkReadDirFunc(fullpath); err == nil {
 					for _, fi := range dircontents {
@@ -316,16 +324,17 @@ func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPaths
 		tstart := time.Now().UnixNano()
 		modnewest, gathers = 0, make(map[string]gather, gatherscap)
 		for i := range dirPathsRecursive {
-			_ = Walk(dirPathsRecursive[i], true, false, ondirorfile, nil)
+			_, _ = walk(dirPathsRecursive[i], true, false, ondirorfile, nil)
 		}
-		for i := range dirPathsOther {
-			_ = Walk(dirPathsOther[i], false, false, nil, ondirorfile)
+		for _, fullpath := range dirPathsOther {
+			_, _ = walk(fullpath, false, false, nil, ondirorfile)
+			checkmodtime(fullpath, nil)
 		}
 		gatherscap = len(gathers)
-		if now := time.Now().UnixNano(); firstrun || holdoff <= 0 || (now-modnewest) > holdoff {
+		if firstrun || holdoff <= 0 || (tstart-modnewest) > holdoff {
 			for fullpath, gather := range gathers {
 				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
-					if timeslastraised[fullpath] = now; raisings == nil {
+					if timeslastraised[fullpath] = tstart; raisings == nil {
 						raisings = make(map[string]os.FileInfo, 4)
 					}
 					raisings[fullpath] = gather.FileInfo
