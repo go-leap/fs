@@ -115,7 +115,7 @@ Locate finds the `filePath` with the given `fileName` that is nearest to
 #### func  ModificationsWatcher
 
 ```go
-func ModificationsWatcher(delayIfAnyModsLaterThanThisAgo time.Duration, dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirOk func(string, string) bool, onModTime func(map[string]os.FileInfo, int64)) func() int
+func ModificationsWatcher(dirPathsRecursive []string, dirPathsOther []string, restrictFilesToSuffix string, dirOk func(string, string) bool, delayIfAnyModsLaterThanThisAgo time.Duration, onModTime func(map[string]os.FileInfo, int64)) func() int
 ```
 ModificationsWatcher returns a func that mustn't be called concurrently without
 manual protection.
