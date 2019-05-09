@@ -148,7 +148,7 @@ func IsAnyFileInDirNewerThanTheOldestOf(dirPath string, filePaths ...string) (is
 }
 
 func HasFilesWithSuffix(dirPath string, suff string) (has bool) {
-	_ = WalkFilesIn(dirPath, func(fullpath string, fileinfo os.FileInfo) bool {
+	_ = WalkFilesIn(dirPath, func(fullpath string, fileinfo os.FileInfo) (keepWalking bool) {
 		has = has || ustr.Suff(fullpath, suff)
 		return !has
 	})
