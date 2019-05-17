@@ -282,7 +282,7 @@ func WriteTextFile(filePath, contents string) error {
 }
 
 // ModificationsWatcher returns a func that mustn't be called concurrently without manual protection.
-func ModificationsWatcher(dirPathsRecursive []string, dirPathsOther func() []string, restrictFilesToSuffix string, dirOk func(string, string) bool, delayIfAnyModsLaterThanThisAgo time.Duration, onModTime func(map[string]os.FileInfo, int64)) func() int {
+func ModificationsWatcher(restrictFilesToSuffix string, dirOk func([]string, []string, string, string) bool, postponeAnyModsLaterThanThisAgo time.Duration, onModTime func(map[string]os.FileInfo, int64, bool)) func([]string, []string) int {
 	type gather struct {
 		os.FileInfo
 		modTime int64
@@ -301,9 +301,11 @@ func ModificationsWatcher(dirPathsRecursive []string, dirPathsOther func() []str
 			}
 		}
 	}
+
+	var dirok func(string, string) bool
 	var ondirorfile func(string, os.FileInfo) bool
 	ondirorfile = func(fullpath string, fileinfo os.FileInfo) bool {
-		if isdir := fileinfo.IsDir(); (isdir && (dirOk == nil || dirOk(fullpath, fileinfo.Name()))) ||
+		if isdir := fileinfo.IsDir(); (isdir && (dirok == nil || dirok(fullpath, fileinfo.Name()))) ||
 			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
 			checkmodtime(fullpath, fileinfo)
 			if isdir {
@@ -318,20 +320,22 @@ func ModificationsWatcher(dirPathsRecursive []string, dirPathsOther func() []str
 	}
 
 	var raisings map[string]os.FileInfo
-	firstrun, gatherscap, holdoff, timeslastraised :=
-		true, 64, int64(delayIfAnyModsLaterThanThisAgo), make(map[string]int64, 128)
-	return func() (numraised int) {
+	firstrun, gatherscap, postpone, timeslastraised :=
+		true, 64, int64(postponeAnyModsLaterThanThisAgo), make(map[string]int64, 128)
+	return func(dirpathsrecursive []string, dirpathsother []string) (numraised int) {
 		tstart := time.Now().UnixNano()
-		modnewest, gathers = 0, make(map[string]gather, gatherscap)
-		for i := range dirPathsRecursive {
-			_, _ = walk(dirPathsRecursive[i], true, false, ondirorfile, nil)
+		modnewest, gathers, dirok = 0, make(map[string]gather, gatherscap), func(dirfullpath string, dirname string) bool {
+			return dirOk(dirpathsrecursive, dirpathsother, dirfullpath, dirname)
 		}
-		for _, fullpath := range dirPathsOther() {
+		for i := range dirpathsrecursive {
+			_, _ = walk(dirpathsrecursive[i], true, false, ondirorfile, nil)
+		}
+		for _, fullpath := range dirpathsother {
 			_, _ = walk(fullpath, false, false, nil, ondirorfile)
 			checkmodtime(fullpath, nil)
 		}
 		gatherscap = len(gathers)
-		if firstrun || holdoff <= 0 || (tstart-modnewest) > holdoff {
+		if firstrun || postpone <= 0 || (tstart-modnewest) > postpone {
 			for fullpath, gather := range gathers {
 				if tlr, _ := timeslastraised[fullpath]; tlr == 0 || gather.modTime == 0 || tlr <= gather.modTime {
 					if timeslastraised[fullpath] = tstart; raisings == nil {
@@ -341,7 +345,7 @@ func ModificationsWatcher(dirPathsRecursive []string, dirPathsOther func() []str
 				}
 			}
 		}
-		onModTime(raisings, tstart)
+		onModTime(raisings, tstart, firstrun)
 		numraised, raisings, firstrun = len(raisings), nil, false
 		return
 	}
