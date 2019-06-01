@@ -59,18 +59,18 @@ func Dir(dirPath string) (contents []os.FileInfo, err error)
 ```
 Dir is like ioutil.ReadDir without the sorting
 
+#### func  DoesDirHaveFilesWithSuffix
+
+```go
+func DoesDirHaveFilesWithSuffix(dirPath string, suff string) (has bool)
+```
+
 #### func  EnsureDir
 
 ```go
 func EnsureDir(dirPath string) (err error)
 ```
 EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
-
-#### func  HasFilesWithSuffix
-
-```go
-func HasFilesWithSuffix(dirPath string, suff string) (has bool)
-```
 
 #### func  IsAnyFileInDirNewerThanTheOldestOf
 
