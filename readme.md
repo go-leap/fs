@@ -13,7 +13,10 @@ var (
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
 
-	WalkReadDirFunc       = ioutil.ReadDir
+	// ReadDirFunc is used by `ModificationsWatcher` and all `ufs.Walk*` funcs.
+	ReadDirFunc = ioutil.ReadDir
+
+	// WalkIgnoreReadDirErrs, if `true`, indicates to all `ufs.Walk*` funcs to ignore-not-return the `error` returned by the `ReadDirFunc`.
 	WalkIgnoreReadDirErrs bool
 )
 ```
@@ -57,13 +60,15 @@ CopyFile attempts an `io.Copy` from `srcFilePath` to `dstFilePath`.
 ```go
 func Dir(dirPath string) (contents []os.FileInfo, err error)
 ```
-Dir is like ioutil.ReadDir without the sorting
+Dir is like ioutil.ReadDir without the sorting.
 
 #### func  DoesDirHaveFilesWithSuffix
 
 ```go
 func DoesDirHaveFilesWithSuffix(dirPath string, suff string) (has bool)
 ```
+DoesDirHaveFilesWithSuffix returns whether there is any file with a name
+suffixed by `suff` in `dirPath`.
 
 #### func  EnsureDir
 
@@ -71,6 +76,8 @@ func DoesDirHaveFilesWithSuffix(dirPath string, suff string) (has bool)
 func EnsureDir(dirPath string) (err error)
 ```
 EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
+Since the introduction of `os.MkdirAll`, it is equivalent to that with
+`CreateModePerm`.
 
 #### func  IsAnyFileInDirNewerThanTheOldestOf
 

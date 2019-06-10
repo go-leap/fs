@@ -17,7 +17,10 @@ var (
 	// Del aliases `os.RemoveAll` — merely a handy short-hand during rapid iteration in non-critical code-paths that already do import `ufs` to not have to repeatedly pull in and out the extra `os` import.
 	Del = os.RemoveAll
 
-	WalkReadDirFunc       = ioutil.ReadDir
+	// ReadDirFunc is used by `ModificationsWatcher` and all `ufs.Walk*` funcs.
+	ReadDirFunc = ioutil.ReadDir
+
+	// WalkIgnoreReadDirErrs, if `true`, indicates to all `ufs.Walk*` funcs to ignore-not-return the `error` returned by the `ReadDirFunc`.
 	WalkIgnoreReadDirErrs bool
 )
 
@@ -90,7 +93,7 @@ func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string
 	return
 }
 
-// Dir is like ioutil.ReadDir without the sorting
+// Dir is like ioutil.ReadDir without the sorting.
 func Dir(dirPath string) (contents []os.FileInfo, err error) {
 	var f *os.File
 	if f, err = os.Open(dirPath); err == nil {
@@ -101,6 +104,7 @@ func Dir(dirPath string) (contents []os.FileInfo, err error) {
 }
 
 // EnsureDir attempts to create the directory `dirPath` if it does not yet exist.
+// Since the introduction of `os.MkdirAll`, it is equivalent to that with `CreateModePerm`.
 func EnsureDir(dirPath string) (err error) {
 	err = os.MkdirAll(dirPath, CreateModePerm)
 	// if !IsDir(dirPath) {
@@ -147,6 +151,7 @@ func IsAnyFileInDirNewerThanTheOldestOf(dirPath string, filePaths ...string) (is
 	return
 }
 
+// DoesDirHaveFilesWithSuffix returns whether there is any file with a name suffixed by `suff` in `dirPath`.
 func DoesDirHaveFilesWithSuffix(dirPath string, suff string) (has bool) {
 	_ = WalkFilesIn(dirPath, func(fullpath string, fileinfo os.FileInfo) (keepWalking bool) {
 		has = has || ustr.Suff(fullpath, suff)
@@ -228,7 +233,7 @@ func walk(dirPath string, self bool, traverse bool, onDir func(string, os.FileIn
 	}
 	if keepWalking {
 		var fileInfos []os.FileInfo
-		if fileInfos, err = WalkReadDirFunc(dirPath); err == nil || WalkIgnoreReadDirErrs {
+		if fileInfos, err = ReadDirFunc(dirPath); err == nil || WalkIgnoreReadDirErrs {
 			err = nil
 			for _, fi := range fileInfos {
 				fname, fmode := fi.Name(), fi.Mode()
@@ -309,7 +314,7 @@ func ModificationsWatcher(restrictFilesToSuffix string, dirOk func([]string, []s
 			((!isdir) && (len(restrictFilesToSuffix) == 0 || ustr.Suff(fullpath, restrictFilesToSuffix))) {
 			checkmodtime(fullpath, fileinfo)
 			if isdir {
-				if dircontents, err := WalkReadDirFunc(fullpath); err == nil {
+				if dircontents, err := ReadDirFunc(fullpath); err == nil {
 					for _, fi := range dircontents {
 						ondirorfile(filepath.Join(fullpath, fi.Name()), fi)
 					}
