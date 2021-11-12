@@ -77,6 +77,12 @@ func CopyAllFilesAndSubDirs(srcDirPath, dstDirPath string, skipFileSuffix string
 		if err = EnsureDir(dstDirPath); err == nil {
 			for _, fi := range fileInfos {
 				fname := fi.Name()
+				linkpath, _ := os.Readlink(filepath.Join(srcDirPath, fname))
+				if linkpath != "" {
+					if nfi, _ := os.Stat(linkpath); nfi != nil {
+						fi, fname = nfi, nfi.Name()
+					}
+				}
 				if srcPath, dstPath := filepath.Join(srcDirPath, fname), filepath.Join(dstDirPath, fname); fi.IsDir() {
 					if !ustr.In(fname, skipDirNames...) {
 						err = CopyAllFilesAndSubDirs(srcPath, dstPath, skipFileSuffix, skipDirNames...)
